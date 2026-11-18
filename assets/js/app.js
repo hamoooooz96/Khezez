@@ -147,6 +147,9 @@
       float m = max(side, ring);
       float b = uBlur + m * 4.2;
       vec3 c;
+      #ifdef CHEAP
+      c = tap(uv, b * 1.15);
+      #else
       if (b < 0.05) {
         c = tap(uv, 0.0);   // sharp area: one sample is enough
       } else {
@@ -155,6 +158,7 @@
           + (tap(uv + vec2(r, 0.0), b) + tap(uv - vec2(r, 0.0), b)
            + tap(uv + vec2(0.0, r), b) + tap(uv - vec2(0.0, r), b)) * 0.15;
       }
+      #endif
       c *= 1.0 - side * 0.09;
       c = mix(vec3(0.925, 0.925, 0.92), c, uLoaded);
       // thickness of the slab catching light on its near edges
@@ -208,7 +212,7 @@
         if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.warn(gl.getShaderInfoLog(s)); return null; }
         return s;
       };
-      const vs = sh(gl.VERTEX_SHADER, VERT), fs = sh(gl.FRAGMENT_SHADER, FRAG);
+      const vs = sh(gl.VERTEX_SHADER, VERT), fs = sh(gl.FRAGMENT_SHADER, (isTouch() ? '#define CHEAP\n' : '') + FRAG);
       if (!vs || !fs) return false;
       const pr = gl.createProgram();
       gl.attachShader(pr, vs); gl.attachShader(pr, fs);
@@ -462,7 +466,8 @@
         this.drag = { x: e.clientX, y: e.clientY, moved: 0, active: false, hist: [], type: e.pointerType };
       });
       c.addEventListener('pointermove', e => {
-        this.pointer = { x: e.clientX, y: e.clientY };
+        // hover (and its per-frame picking) only makes sense for a mouse; a lifted finger leaves no pointer
+        this.pointer = e.pointerType === 'mouse' ? { x: e.clientX, y: e.clientY } : null;
         const d = this.drag;
         if (!d) { this.needPick = true; return; }
         const dx = e.clientX - d.x, dy = e.clientY - d.y;
@@ -473,7 +478,7 @@
         if (d.active) {
           // 1:1 along the line of slabs on screen
           const dt = (dx * this.slotPx.x + dy * this.slotPx.y) / this.slotPx.len;
-          this.target -= dt; this.scroll -= dt;
+          this.target -= dt;
           d.hist.push({ v: dt, t: performance.now() });
           if (d.hist.length > 10) d.hist.shift();
         }
@@ -523,7 +528,8 @@
     tick(dt) {
       if (!this.ok || !this.visible || this.lost) return;
       const s0 = this.scroll;
-      this.scroll = Math.abs(this.target - this.scroll) < 1e-4 ? this.target : damp(this.scroll, this.target, 7, dt);
+      // while a finger is down follow it closely but smoothly (touch events arrive unevenly)
+      this.scroll = Math.abs(this.target - this.scroll) < 1e-4 ? this.target : damp(this.scroll, this.target, this.drag && this.drag.active ? 22 : 7, dt);
       let anim = Math.abs(s0 - this.scroll) > 1e-6;
       const N = this.N;
       for (const p of this.planes) {
@@ -624,7 +630,7 @@
      FOCUS — the chosen slab turns to face you; the rest rush past
      ========================================================================== */
   const Hint = { el: $('#hint'), set(on, text) { if (text) this.el.textContent = text; this.el.classList.toggle('is-on', !!on); } };
-  const Switch = { el: $('#switch'), set(on) { this.el.classList.toggle('is-off', !on); }, view(name) { $$('a', this.el).forEach(a => a.classList.toggle('is-active', a.dataset.view === name)); } };
+  const Switch = { set() {}, view() {} };   // Overview / Index switch removed from the page
 
   const Focus = {
     busy: false, leaving: false, wheelAcc: 0, wheelT: 0, t0: 0,
