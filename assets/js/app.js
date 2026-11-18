@@ -147,9 +147,6 @@
       float m = max(side, ring);
       float b = uBlur + m * 4.2;
       vec3 c;
-      #ifdef CHEAP
-      c = tap(uv, b * 1.15);
-      #else
       if (b < 0.05) {
         c = tap(uv, 0.0);   // sharp area: one sample is enough
       } else {
@@ -158,7 +155,6 @@
           + (tap(uv + vec2(r, 0.0), b) + tap(uv - vec2(r, 0.0), b)
            + tap(uv + vec2(0.0, r), b) + tap(uv - vec2(0.0, r), b)) * 0.15;
       }
-      #endif
       c *= 1.0 - side * 0.09;
       c = mix(vec3(0.925, 0.925, 0.92), c, uLoaded);
       // thickness of the slab catching light on its near edges
@@ -185,7 +181,7 @@
 
     init() {
       let gl = null;
-      try { gl = this.canvas.getContext('webgl', { alpha: true, antialias: !isTouch(), premultipliedAlpha: true, powerPreference: 'high-performance' }); } catch (e) { gl = null; }
+      try { gl = this.canvas.getContext('webgl', { alpha: true, antialias: true, premultipliedAlpha: true, powerPreference: 'high-performance' }); } catch (e) { gl = null; }
       if (!gl) return false;
       this.gl = gl;
       if (!this.setupGL()) return false;
@@ -212,7 +208,7 @@
         if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.warn(gl.getShaderInfoLog(s)); return null; }
         return s;
       };
-      const vs = sh(gl.VERTEX_SHADER, VERT), fs = sh(gl.FRAGMENT_SHADER, (isTouch() ? '#define CHEAP\n' : '') + FRAG);
+      const vs = sh(gl.VERTEX_SHADER, VERT), fs = sh(gl.FRAGMENT_SHADER, FRAG);
       if (!vs || !fs) return false;
       const pr = gl.createProgram();
       gl.attachShader(pr, vs); gl.attachShader(pr, fs);
@@ -328,8 +324,7 @@
     layout() {
       const vw = innerWidth, vh = innerHeight, a = vw / vh;
       this.vw = vw; this.vh = vh; this.aspect = a;
-      // phones: 1.5x is visually the same through the blur and frost, with far fewer pixels to fill
-      this.dpr = Math.min(window.devicePixelRatio || 1, isTouch() ? 1.5 : 2);
+      this.dpr = Math.min(window.devicePixelRatio || 1, 2);
       this.canvas.width = Math.round(vw * this.dpr);
       this.canvas.height = Math.round(vh * this.dpr);
       if (this.gl) this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
