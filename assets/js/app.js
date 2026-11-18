@@ -146,15 +146,10 @@
       float ring = (1.0 - smoothstep(0.012, 0.17, e)) * uEdge;
       float m = max(side, ring);
       float b = uBlur + m * 4.2;
-      vec3 c;
-      if (b < 0.05) {
-        c = tap(uv, 0.0);   // sharp area: one sample is enough
-      } else {
-        float r = 0.0032 * b;
-        c = tap(uv, b) * 0.4
-          + (tap(uv + vec2(r, 0.0), b) + tap(uv - vec2(r, 0.0), b)
-           + tap(uv + vec2(0.0, r), b) + tap(uv - vec2(0.0, r), b)) * 0.15;
-      }
+      float r = 0.0032 * b;
+      vec3 c = tap(uv, b) * 0.4
+             + (tap(uv + vec2(r, 0.0), b) + tap(uv - vec2(r, 0.0), b)
+              + tap(uv + vec2(0.0, r), b) + tap(uv - vec2(0.0, r), b)) * 0.15;
       c *= 1.0 - side * 0.09;
       c = mix(vec3(0.925, 0.925, 0.92), c, uLoaded);
       // thickness of the slab catching light on its near edges
@@ -461,8 +456,7 @@
         this.drag = { x: e.clientX, y: e.clientY, moved: 0, active: false, hist: [], type: e.pointerType };
       });
       c.addEventListener('pointermove', e => {
-        // hover (and its per-frame picking) only makes sense for a mouse; a lifted finger leaves no pointer
-        this.pointer = e.pointerType === 'mouse' ? { x: e.clientX, y: e.clientY } : null;
+        this.pointer = { x: e.clientX, y: e.clientY };
         const d = this.drag;
         if (!d) { this.needPick = true; return; }
         const dx = e.clientX - d.x, dy = e.clientY - d.y;
@@ -473,7 +467,7 @@
         if (d.active) {
           // 1:1 along the line of slabs on screen
           const dt = (dx * this.slotPx.x + dy * this.slotPx.y) / this.slotPx.len;
-          this.target -= dt;
+          this.target -= dt; this.scroll -= dt;
           d.hist.push({ v: dt, t: performance.now() });
           if (d.hist.length > 10) d.hist.shift();
         }
@@ -523,8 +517,7 @@
     tick(dt) {
       if (!this.ok || !this.visible || this.lost) return;
       const s0 = this.scroll;
-      // while a finger is down follow it closely but smoothly (touch events arrive unevenly)
-      this.scroll = Math.abs(this.target - this.scroll) < 1e-4 ? this.target : damp(this.scroll, this.target, this.drag && this.drag.active ? 22 : 7, dt);
+      this.scroll = Math.abs(this.target - this.scroll) < 1e-4 ? this.target : damp(this.scroll, this.target, 7, dt);
       let anim = Math.abs(s0 - this.scroll) > 1e-6;
       const N = this.N;
       for (const p of this.planes) {
@@ -625,7 +618,7 @@
      FOCUS — the chosen slab turns to face you; the rest rush past
      ========================================================================== */
   const Hint = { el: $('#hint'), set(on, text) { if (text) this.el.textContent = text; this.el.classList.toggle('is-on', !!on); } };
-  const Switch = { set() {}, view() {} };   // Overview / Index switch removed from the page
+  const Switch = { el: $('#switch'), set(on) { this.el.classList.toggle('is-off', !on); }, view(name) { $$('a', this.el).forEach(a => a.classList.toggle('is-active', a.dataset.view === name)); } };
 
   const Focus = {
     busy: false, leaving: false, wheelAcc: 0, wheelT: 0, t0: 0,
