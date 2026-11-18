@@ -146,10 +146,15 @@
       float ring = (1.0 - smoothstep(0.012, 0.17, e)) * uEdge;
       float m = max(side, ring);
       float b = uBlur + m * 4.2;
-      float r = 0.0032 * b;
-      vec3 c = tap(uv, b) * 0.4
-             + (tap(uv + vec2(r, 0.0), b) + tap(uv - vec2(r, 0.0), b)
-              + tap(uv + vec2(0.0, r), b) + tap(uv - vec2(0.0, r), b)) * 0.15;
+      vec3 c;
+      if (b < 0.05) {
+        c = tap(uv, 0.0);   // sharp area: one sample is enough
+      } else {
+        float r = 0.0032 * b;
+        c = tap(uv, b) * 0.4
+          + (tap(uv + vec2(r, 0.0), b) + tap(uv - vec2(r, 0.0), b)
+           + tap(uv + vec2(0.0, r), b) + tap(uv - vec2(0.0, r), b)) * 0.15;
+      }
       c *= 1.0 - side * 0.09;
       c = mix(vec3(0.925, 0.925, 0.92), c, uLoaded);
       // thickness of the slab catching light on its near edges
@@ -176,7 +181,7 @@
 
     init() {
       let gl = null;
-      try { gl = this.canvas.getContext('webgl', { alpha: true, antialias: true, premultipliedAlpha: true, powerPreference: 'high-performance' }); } catch (e) { gl = null; }
+      try { gl = this.canvas.getContext('webgl', { alpha: true, antialias: !isTouch(), premultipliedAlpha: true, powerPreference: 'high-performance' }); } catch (e) { gl = null; }
       if (!gl) return false;
       this.gl = gl;
       if (!this.setupGL()) return false;
@@ -319,7 +324,8 @@
     layout() {
       const vw = innerWidth, vh = innerHeight, a = vw / vh;
       this.vw = vw; this.vh = vh; this.aspect = a;
-      this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+      // phones: 1.5x is visually the same through the blur and frost, with far fewer pixels to fill
+      this.dpr = Math.min(window.devicePixelRatio || 1, isTouch() ? 1.5 : 2);
       this.canvas.width = Math.round(vw * this.dpr);
       this.canvas.height = Math.round(vh * this.dpr);
       if (this.gl) this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);

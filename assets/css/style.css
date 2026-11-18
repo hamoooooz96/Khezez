@@ -53,6 +53,10 @@ p, h1 { margin: 0; font: inherit; }
 .glass::after { background: var(--ink); opacity: .03; z-index: -1; transition: opacity 200ms ease; }
 @media (hover: hover) and (pointer: fine) { .glass:hover::after { opacity: .055; } }
 button.glass:active, a.glass:active { transform: scale(.985); }
+/* touch screens: a live blur over the moving canvas costs a full re-blur every frame on phones */
+@media (hover: none), (pointer: coarse) {
+  .glass { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(250, 250, 250, .86); }
+}
 
 /* ---------- preloader ---------- */
 .loader { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: var(--bg); font-variant-numeric: tabular-nums; }
