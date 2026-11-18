@@ -438,12 +438,8 @@
       if (this.hover === p) return;
       this.hover = p;
       this.canvas.style.cursor = p ? 'pointer' : '';
-      if (p) {
-        this.labelEl.textContent = label(p.p);
-        if (!this.lab.on && this.pointer) { this.lab.x = this.pointer.x; this.lab.y = this.pointer.y; }
-      }
+      // no text label on hover: the frame itself slides out and clears
       this.lab.on = !!p;
-      this.labelEl.classList.toggle('is-on', !!p);
     },
     updateLabel(dt) {
       if (!this.lab.on || !this.pointer || this.focus) return;
@@ -781,7 +777,7 @@
         const t = document.createElement('div');
         t.className = 'tile';
         t.style.aspectRatio = m.ratio;
-        t.append(makeImg(m, { size: 'sm', lazy: true, alt: '' }));
+        t.append(makeImg(m, { size: 'md', sizes: '(max-width: 760px) 50vw, (max-width: 1023px) 34vw, 20vw', lazy: true, alt: '' }));
         b.append(t);
         frag.append(b);
       });
